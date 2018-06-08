@@ -25,6 +25,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+
+#include "stdio.h"
+#include "ctime"
+
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/Pose.h>
@@ -35,7 +39,7 @@
 #define GRAVITY 		9.81
 #define QUEUE_SIZE 		5
 #define PI 				3.141592
-#define TO_RAD(angle) 	(angle / 180 * PI)
+#define TO_RAD(angle) 	(angle / 180 * PI) // should not be needed since the rotations are in rad/sec
 
 float lp = 0;
 float hp = 0;
@@ -43,10 +47,8 @@ float hp = 0;
 // Parameters (TODO: But in param file)
 float zero_velocity = 0.1;
 float zero_acceleration = 1;
+float zero_rotation = 0.3; // about 17 degrees rotation
 
-/*
-*	Calculate the length of a 3D vector
-*/
 float getVectorLength(geometry_msgs::Vector3 v)
 {
 	float sum = (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
@@ -54,49 +56,61 @@ float getVectorLength(geometry_msgs::Vector3 v)
 	return sqrt;
 }
 
-/* 
-*	displacement = velocity * time + 0.5 * acceleration * time^2 
+/*
+*	Note: This is a temporary test function, not to be included in the final build
 */
-float distanceChange(float v, float t, float a)
+void accelerationMagic(geometry_msgs::Vector3* linear_acceleration, geometry_msgs::Vector3 velocity)
 {
-	return (v * t) + (0.5f * a * t * t);
-}
-
-/* 
-*	velocity = acceleration * time 
-*/
-float velocityChange(float t, float a)
-{
-	return a * t;
-}
-
-/* 
-*	Calculate new position for all 3 directions 
-*/
-void calculateNewPosition(geometry_msgs::Pose* pose,
-							  geometry_msgs::Vector3 velocity,
-							  geometry_msgs::Vector3 linear_acceleration,
-							  float deltaTime)
-{
-	pose->position.x += distanceChange(velocity.x, deltaTime, linear_acceleration.x);	
-	pose->position.y += distanceChange(velocity.y, deltaTime, linear_acceleration.y);		
-	pose->position.z += distanceChange(velocity.z, deltaTime, linear_acceleration.z);	
-}
-
-/* 
-*	Calculate new velocity in all 3 directions 
-*/
-void calculateNewVelocity(geometry_msgs::Vector3* velocity,
-							  geometry_msgs::Vector3 linear_acceleration,
-							  float deltaTime)
-{
-	velocity->x += velocityChange(linear_acceleration.x, deltaTime);
-	velocity->y += velocityChange(linear_acceleration.y, deltaTime);
-	velocity->z += velocityChange(linear_acceleration.z, deltaTime);
+	if(getVectorLength(*linear_acceleration) < zero_acceleration)
+	{
+		linear_acceleration->x = 0;
+		linear_acceleration->y = 0;
+		linear_acceleration->z = 0;
+	}
 }
 
 /*
-*	Get Roll Pitch Yaw from a tf Quaternion and store them in a geometry_msgs vector3
+*	Note: This is a temporary test function, not to be included in the final build
+*/
+void velocityMagic(geometry_msgs::Vector3* velocity, geometry_msgs::Vector3 acceleration)
+{
+	if(getVectorLength(*velocity) < zero_velocity)
+	{
+		velocity->x = 0;
+		velocity->y = 0;
+		velocity->z = 0;
+	}
+	/*if(fabsf(velocity->x) < zero_velocity)
+		velocity->x = 0;
+	if(fabsf(velocity->y) < zero_velocity)
+		velocity->y = 0;
+	if(fabsf(velocity->z) < zero_velocity)
+		velocity->z = 0;*/
+}
+
+
+/*
+*	Velocity = Time * Acceleration
+*/
+void calculateNewVelocity(geometry_msgs::Vector3* velocity, geometry_msgs::Vector3 linear_acceleration, float deltaTime)
+{
+	velocity->x += deltaTime * linear_acceleration.x;
+	velocity->y += deltaTime * linear_acceleration.y;
+	velocity->z += deltaTime * linear_acceleration.z;
+}
+
+/*
+*	Position = Time * Velocity
+*/
+void calculateNewPosition(geometry_msgs::Pose* pose, geometry_msgs::Vector3 velocity, float deltaTime)
+{
+	pose->position.x += deltaTime * velocity.x;
+	pose->position.y += deltaTime * velocity.y;
+	pose->position.z += deltaTime * velocity.z;
+}
+
+/*
+*	Get Roll Pitch Yaw from a tf Quaternion and store them in a geometry_msgs vector
 */
 geometry_msgs::Vector3 getRPY(geometry_msgs::Quaternion q)
 {
@@ -105,9 +119,21 @@ geometry_msgs::Vector3 getRPY(geometry_msgs::Quaternion q)
 	return rpy;
 }
 
+//void writeRPYtoLog( geometry_msgs::Pose poseIn, FILE* pFile){
+/*
+void writeRPYtoLog( geometry_msgs::Pose poseIn)
+{
+	FILE* pFile = fopen("/home/ubuntu/imu_bagfiles/RPY.txt" , "a");
+	fprintf(pFile, "Roll, Pitch and Yaw: r: %.5f p: %.5f y: %.5f \n", poseIn.orientation.x, poseIn.orientation.y, poseIn.orientation.z);
+	fclose(pFile);
+}
+
+*/
+///
 /*
 *	This callback is called every time new imu data is available
 */
+//void imuCallback(const sensor_msgs::Imu::ConstPtr& msg, std::string path)
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
 	// Variables to keep between callbacks
@@ -117,13 +143,13 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 
 	// One time variables
 	geometry_msgs::Vector3 acceleration = msg->linear_acceleration;
-	ros::Time now = msg->header.stamp;
+	ros::Time now = ros::Time::now();
 
 	// First time setup
 	if (prev_time.toSec() == 0)
 	{
 		ROS_INFO("setup");
-		prev_time = msg->header.stamp;
+		prev_time = ros::Time::now();
 		return;
 	}
 
@@ -136,20 +162,45 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 	else
 		prev_time = now;
 
+	// store the orientation in a msg
 	geometry_msgs::Vector3 RPY = getRPY(msg->orientation);
 
-	calculateNewPosition(&pose, velocity, msg->linear_acceleration, timePassed);
 
-	calculateNewVelocity(&velocity, msg->linear_acceleration, timePassed);
+	// TODO: Acceleration magic
+	accelerationMagic(&acceleration, velocity);
+
+	// Calculate new velocity
+	calculateNewVelocity(&velocity, acceleration, timePassed);
+
+	// TODO: Magic to make it work
+	velocityMagic(&velocity, acceleration);
+
+	// Calculate new position
+	calculateNewPosition(&pose, velocity, timePassed);
 
 	// Set new orientation
 	pose.orientation = msg->orientation;
+
+	if(pose.position.z < lp)
+	{
+		lp = pose.position.z;
+	}
+
+	if(pose.position.z > hp)
+	{
+		hp = pose.position.z;
+	}
+
+	// Code made by Tim:
+	// ROS_INFO("%.3f <- %.3f -> %.3f | %.3f %.3f", lp, pose.position.z, hp, getVectorLength(velocity), getVectorLength(acceleration));
 	
-	// Display current position
-	ROS_INFO("x: %.3f y:%.3f z: %.3f", pose.position.x, pose.position.y, pose.position.z);
+	// Display current orientation
+	ROS_INFO("Roll, Pitch and Yaw: r: %.5f p: %.5f y: %.5f", pose.orientation.x, pose.orientation.y, pose.orientation.z);
+	//writeRPYtoLog(pose, FILE* pFile = fopen(path , "a"););
+
 	//ROS_INFO("%f %f %f", velocity.x, velocity.y, velocity.z);
-	//ROS_INFO("%f %f %f", msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
-	//ROS_INFO("x: %.3f y:%.3f z: %.3f", RPY.x, RPY.y, RPY.z);
+	//ROS_INFO("%f %f %f", msg->linear_acceleration.x / 9.81, msg->linear_acceleration.y / 9.81, msg->linear_acceleration.z / 9.81);
+	//ROS_INFO("%f, %f, %f, %f", pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
 }
 
 /*
@@ -157,13 +208,20 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 */
 int main(int argc, char *argv[])
 {
+		//TODO: make this into an init method
     // Initialize Node and handles
+		//std::time_t t = std::time(0); //get time now
+	//	std::tm* now = std::localtime(&t);
+	//	std::string currentTime = (now->tm_mon + 1) + "-" + now->tm_mday + "\n");
+	//	std::string path = "/home/ubuntu/imu_bagfiles/RPY-" + currentTime + ".txt");	
+
     ros::init(argc, argv, "imu_reader_node");
     ros::NodeHandle nh;
     ros::NodeHandle nh_private("~");     
 
     // Subscribe to the imu data
     ros::Subscriber sub = nh.subscribe("/dji_sdk/imu", QUEUE_SIZE, imuCallback);
-
-    ros::spin();
+    //ros::Subscriber sub = nh.subscribe("/dji_sdk/imu", QUEUE_SIZE, imuCallback(path);
+    
+		ros::spin();
 }

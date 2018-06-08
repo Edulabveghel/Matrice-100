@@ -1,0 +1,12 @@
+<launch>
+  <node name="gmapping" pkg="gmapping" type="slam_gmapping" output="screen">
+	<remap from="scan"	to="base_scan"/>
+	<param name="map_update_interval"	  	type="double"  value="1" />
+	<param name="linearUpdate"	  			type="double"  value="0" />
+	<param name="delta"						type="double"  value="0.1" />
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sweep_ros)/rviz/sweep.rviz" />
+
+  <node name="record_player" pkg="rosbag" type="play" output="screen" args="--clock ~/catkin_ws/bag/sweep_node.bag" />
+</launch>

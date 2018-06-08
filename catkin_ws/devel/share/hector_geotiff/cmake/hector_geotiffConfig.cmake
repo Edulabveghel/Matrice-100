@@ -109,7 +109,7 @@ if(NOT "/home/ubuntu/catkin_ws/src/hector_slam/hector_geotiff/include;/usr/inclu
   endforeach()
 endif()
 
-set(libraries "geotiff_writer;/usr/lib/i386-linux-gnu/libQtGui.so;/usr/lib/i386-linux-gnu/libQtCore.so")
+set(libraries "geotiff_writer;/usr/lib/arm-linux-gnueabihf/libQtGui.so;/usr/lib/arm-linux-gnueabihf/libQtCore.so")
 foreach(library ${libraries})
   # keep build configuration keywords, target names and absolute libraries as-is
   if("${library}" MATCHES "^(debug|optimized|general)$")

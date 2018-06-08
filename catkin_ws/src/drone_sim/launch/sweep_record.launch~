@@ -1,0 +1,15 @@
+<launch>
+  <include file="$(find sweep_ros)/launch/sweep.launch" />
+ 
+  <node pkg="tf" type="static_transform_publisher" name="tf_broadcaster" args="0 0 0 0 0 0 1 base_link laser_frame 100" />
+  <node pkg="tf" type="static_transform_publisher" name="tf_broadcaster2" args="0 0 0 0 0 0 1 odom base_link 100" />
+
+  <node name="gmapping"  pkg="gmapping" type="slam_gmapping" output="screen">
+	<remap from="scan"	to="base_scan"/>
+	<param name="map_update_interval"	  	type="double"  value="1" />
+	<param name="linearUpdate"	  			type="double"  value="0" />
+	<param name="delta"						type="double"  value="0.1" />
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sweep_ros)/rviz/sweep.rviz" />
+</launch>
