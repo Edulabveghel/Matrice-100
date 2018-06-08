@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/catkin_ws/devel
+
+Name: drone_sim
+Description: Description of drone_sim
+Version: 0.0.0
+Cflags: -I/home/ubuntu/catkin_ws/src/drone_sim/include
+Libs: -L/home/ubuntu/catkin_ws/devel/lib 
+Requires: roscpp std_msgs tf

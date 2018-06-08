@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/catkin_ws/devel
+
+Name: imu_reader
+Description: Description of imu_reader
+Version: 0.0.0
+Cflags: -I/home/ubuntu/catkin_ws/src/imu_reader/include
+Libs: -L/home/ubuntu/catkin_ws/devel/lib 
+Requires: roscpp std_msgs

@@ -1,0 +1,28 @@
+<launch>
+  <!-- 
+  	Find and open the hector slam launch file, this node provides
+  	The transform between the map frame and base_footprint frame 
+  -->
+  <include file="$(find hector_mapping)/launch/mapping_default.launch" />
+  
+  <!-- 
+	Find and open sweep launch file, this also launches a static
+  	transform broadcaster between the laser frame and the base link frame 
+  -->
+  <include file="$(find sweep_ros)/launch/sweep.launch" />
+ 
+  <!-- 
+  	Mapper node that:
+	- Controles the scanner
+	- Broadcasts the transform between the base link frame and base footprint frame 
+	- Saves the map
+  -->
+  <node pkg="mapper" type="mapper_node" name="mapper" output="screen">
+	<param name="toggle_scanner"	value="toggle_scanner" />
+	<param name="base_link"			value="base_link" />
+	<param name="base_footprint"	value="base_footprint" />
+
+	<!-- comment/remove this parameter to save the map by timestamp -->  
+	<param name="map_file_name"		value="edulab" /> 
+  </node>
+</launch>

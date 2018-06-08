@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/catkin_ws/devel
+
+Name: sweep_ros
+Description: Description of sweep_ros
+Version: 0.2.0
+Cflags: -I/home/ubuntu/catkin_ws/src/sweep_ros/include
+Libs: -L/home/ubuntu/catkin_ws/devel/lib 
+Requires: sensor_msgs

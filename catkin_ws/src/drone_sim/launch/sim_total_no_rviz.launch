@@ -1,0 +1,13 @@
+<launch>
+  <include file="$(find sweep_ros)/launch/sweep.launch" />
+ 
+  <node pkg="drone_sim" type="drone_sim_node" name="drone_sim" output="screen">
+	<param name="scan_time"					type="int"	   	value="50" />   
+  </node>
+
+  <node pkg="drone_sim" type="drone_sim_broadcaster_node" name="base_link_broadcaster" output="screen" />
+
+  <node pkg="tf" type="static_transform_publisher" name="tf_broadcaster" args="0 0 0 0 0 0 1 base_link laser_frame 100" />
+
+  <include file="$(find gmapping)/launch/gmapping.launch" />
+</launch>
